@@ -179,7 +179,7 @@ function renderHome() {
 // Both people count 3-2-1 on the call and press Play; start is instant because it is already buffered.
 let player = null, ready = false, dur = 0;
 let phase = "loading";            // loading | warming | ready | playing | paused
-let ourAction = false;
+let ourAction = false, warmSince = 0;
 let tune = store.get("tune:" + (song && song.id), 0); // per-viewer lyric fine-tune (sec)
 let curIdx = -2;
 
@@ -227,7 +227,7 @@ function renderPlayer() {
     const i = +li.dataset.i;
     if (i >= 0) { player.seekTo(Math.max(0, song.lines[i][0] + song.offset - tune - 0.3), true); play(); }
   });
-  $("#play").onclick = () => (phase === "playing" ? pause() : play());
+  $("#play").onclick = () => (phase === "playing" ? pause() : phase === "blocked" ? warmUp() : play());
   $("#restart").onclick = () => { ourAction = true; player.pauseVideo(); player.seekTo(0, true); phase = "ready"; };
   $("#nBack").onclick = () => nudge(-0.5);
   $("#nFwd").onclick = () => nudge(0.5);
@@ -252,6 +252,7 @@ function warmUp() {
   ready = true;
   dur = player.getDuration() || 0;
   phase = "warming";
+  warmSince = performance.now();
   ourAction = true;
   player.mute();          // muted autoplay is allowed without a click
   player.playVideo();
@@ -294,17 +295,20 @@ function tick() {
     if (st === YT.PlayerState.PLAYING && cur > 0.25) {
       ourAction = true; player.pauseVideo(); player.seekTo(0, true); player.unMute();
       phase = "ready";
+    } else if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING && performance.now() - warmSince > 5000) {
+      phase = "blocked";   // browser refused muted autoplay (e.g. phone power saving): a tap does the warm-up instead
     } else {
       status("Getting ready (ad + buffering, muted) · 준비 중");
     }
   }
+  if (phase === "blocked") status("Tap <b>Get ready</b> once so the video can buffer · 준비 버튼을 한 번 눌러 주세요");
   if (phase === "ready") status("<b>Ready ✓</b> Count 3, 2, 1 on the call and press Play · 준비 완료");
   if (phase === "playing") status(`Playing <b>${fmt(cur)}</b> / ${fmt(dur)}`);
   if (phase === "paused") status(`Paused at <b>${fmt(cur)}</b>`);
 
   const btn = $("#play");
   btn.disabled = phase === "loading" || phase === "warming";
-  const label = phase === "playing" ? "Pause · 일시정지" : "Play · 재생";
+  const label = phase === "playing" ? "Pause · 일시정지" : phase === "blocked" ? "Get ready · 준비" : "Play · 재생";
   if (btn.firstChild.textContent !== label) btn.firstChild.textContent = label;
 
   // lyrics + dawn
