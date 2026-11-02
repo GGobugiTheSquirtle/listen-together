@@ -179,7 +179,7 @@ function renderHome() {
 // Both people count 3-2-1 on the call and press Play; start is instant because it is already buffered.
 let player = null, ready = false, dur = 0;
 let phase = "loading";            // loading | warming | ready | playing | paused
-let ourAction = false, warmSince = 0;
+let ourAction = false, warmSince = 0, lastCur = -1;
 let tune = store.get("tune:" + (song && song.id), 0); // per-viewer lyric fine-tune (sec)
 let curIdx = -2;
 
@@ -290,15 +290,21 @@ function tick() {
   if (!dur) dur = player.getDuration() || 0;
   const st = player.getPlayerState(), cur = player.getCurrentTime() || 0;
 
-  if (phase === "warming") {
-    // getCurrentTime stays at 0 while an ad runs; once the song itself moves, park it at 0:00
+  if (phase === "warming" || phase === "blocked") {
+    // Measured on the live site: during a pre-roll ad the player reports state -1 (unstarted)
+    // while getCurrentTime() runs on the ad's own clock. The song itself reports state 1 (playing).
+    const moving = cur !== lastCur;
+    lastCur = cur;
+    if (moving) warmSince = performance.now();
     if (st === YT.PlayerState.PLAYING && cur > 0.25) {
       ourAction = true; player.pauseVideo(); player.seekTo(0, true); player.unMute();
       phase = "ready";
-    } else if (st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING && performance.now() - warmSince > 5000) {
-      phase = "blocked";   // browser refused muted autoplay (e.g. phone power saving): a tap does the warm-up instead
-    } else {
-      status("Getting ready (ad + buffering, muted) · 준비 중");
+    } else if (phase === "warming" && !moving && st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING
+               && performance.now() - warmSince > 5000) {
+      phase = "blocked";   // nothing moving for 5 s: the browser refused muted autoplay, so a tap does the warm-up
+    } else if (phase === "warming") {
+      status(st === -1 && moving ? "An ad is playing muted. The song will be ready right after · 광고 중, 끝나면 자동 준비"
+                                 : "Getting ready (buffering, muted) · 준비 중");
     }
   }
   if (phase === "blocked") status("Tap <b>Get ready</b> once so the video can buffer · 준비 버튼을 한 번 눌러 주세요");
