@@ -203,6 +203,10 @@ function renderPlayer() {
             <button class="pill" id="play" disabled>Play · 재생<span class="ic">${PLAY}</span></button>
             <button class="ghost" id="restart">Back to start · 처음으로</button>
           </div>
+          <div class="row" id="fallback" hidden>
+            <button class="ghost" id="mAudio">Lyrics only: music app</button>
+            <button class="ghost" id="mMv">Lyrics only: YouTube MV</button>
+          </div>
           <div class="row tune">
             <span>Nudge playback</span>
             <button class="ghost" id="nBack">−0.5s</button><button class="ghost" id="nFwd">+0.5s</button>
@@ -239,12 +243,15 @@ function renderPlayer() {
     player = new YT.Player("yt", {
       videoId: song.videoId,
       playerVars: { playsinline: 1, rel: 0, cc_load_policy: 0 },
-      events: { onReady: warmUp, onStateChange: onState },
+      events: { onReady: warmUp, onStateChange: onState, onError: e => { ytError = e.data; } },
     });
   };
   const s = document.createElement("script");
   s.src = "https://www.youtube.com/iframe_api";
+  s.onerror = () => { ytError = "script"; };
   document.head.appendChild(s);
+  $("#mAudio").onclick = () => startManual(0);
+  $("#mMv").onclick = () => startManual(song.offset);
   setInterval(tick, 200);
 }
 
@@ -266,7 +273,31 @@ function play() {
   phase = "playing";
 }
 function pause() { ourAction = true; player.pauseVideo(); phase = "paused"; }
-function nudge(d) { if (ready) player.seekTo(Math.max(0, (player.getCurrentTime() || 0) + d), true); }
+function nudge(d) {
+  if (manual) { manual.t0 -= d * 1000; return; }
+  if (ready) player.seekTo(Math.max(0, (player.getCurrentTime() || 0) + d), true);
+}
+
+// Lyrics-only mode: for when the YouTube player can't load here (blocked network, ad blocker, region).
+// The song plays in another app; the lyrics run on a local clock started at the same 3-2-1.
+let manual = null, ytError = null;   // manual = { t0, offset, pausedAt }
+function startManual(offset) {
+  manual = { t0: 0, offset, pausedAt: 0 };
+  $("#play").disabled = false;
+  $("#play").firstChild.textContent = "Start lyrics · 가사 시작";
+  $("#play").onclick = () => {
+    if (!manual.t0) { manual.t0 = performance.now(); return; }
+    if (manual.pausedAt) { manual.t0 += performance.now() - manual.pausedAt; manual.pausedAt = 0; }
+    else manual.pausedAt = performance.now();
+  };
+  $("#restart").onclick = () => { manual.t0 = 0; manual.pausedAt = 0; };
+}
+function manualPos() {
+  if (!manual.t0) return 0;
+  return ((manual.pausedAt || performance.now()) - manual.t0) / 1000;
+}
+const YT_ERR = { 2: "the video link is invalid", 5: "this browser can't play it", 100: "the video was removed",
+                 101: "the owner blocks it outside YouTube here", 150: "the owner blocks it outside YouTube here" };
 
 function onState(e) {
   const S = YT.PlayerState;
@@ -286,6 +317,22 @@ function setTune(v) {
 }
 
 function tick() {
+  if (manual) {
+    const pos = manualPos();
+    const label = !manual.t0 ? "Start lyrics · 가사 시작" : manual.pausedAt ? "Resume · 계속" : "Pause · 일시정지";
+    if ($("#play").firstChild.textContent !== label) $("#play").firstChild.textContent = label;
+    status(!manual.t0 ? "Play the song in your music or YouTube app, and press <b>Start lyrics</b> on the same 3, 2, 1"
+                      : `Lyrics only <b>${fmt(pos)}</b>. Use Nudge if the words run early or late`);
+    drawLyrics(pos, manual.offset, dur || song.lines[song.lines.length - 1][0] + 40);
+    return;
+  }
+  if (ytError !== null || (!ready && performance.now() > 10000)) {
+    const why = ytError === null || ytError === "script" ? "YouTube didn't load on this device or network"
+                                                         : "YouTube error: " + (YT_ERR[ytError] || ytError);
+    status(`${why}. Check that youtube.com opens here and turn off any ad blocker, or use <b>Lyrics only</b> below.`);
+    $("#fallback").hidden = false;
+    return;
+  }
   if (!ready) { status("Loading the video…"); return; }
   if (!dur) dur = player.getDuration() || 0;
   const st = player.getPlayerState(), cur = player.getCurrentTime() || 0;
@@ -317,8 +364,11 @@ function tick() {
   const label = phase === "playing" ? "Pause · 일시정지" : phase === "blocked" ? "Get ready · 준비" : "Play · 재생";
   if (btn.firstChild.textContent !== label) btn.firstChild.textContent = label;
 
-  // lyrics + dawn
-  const lt = cur - song.offset + tune;
+  if (ytError === null) drawLyrics(cur, song.offset, dur);
+}
+
+function drawLyrics(cur, offset, dur) {
+  const lt = cur - offset + tune;
   let idx = -1;
   for (let i = 0; i < song.lines.length; i++) if (song.lines[i][0] <= lt + 0.15) idx = i;
   if (idx !== curIdx) {
