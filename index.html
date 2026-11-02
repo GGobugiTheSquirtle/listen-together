@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Listen Together</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500&family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: editorial split. Sticky video + controls on the left, lyric scroll on the right; stacks on phones.
+   Look: one deliberate night sky that warms toward dawn as the song plays (--dawn 0..1). */
+:root {
+  --night: #0b0d1c;
+  --night-2: #151a36;
+  --ink: #eef0fb;
+  --ink-dim: #8f95b8;
+  --ink-faint: #4b5079;
+  --dawn: #f3b68a;
+  --dawn-soft: #f7d9c2;
+  --glass: rgba(255, 255, 255, 0.045);
+  --hair: rgba(255, 255, 255, 0.09);
+  --f-ko: "Gowun Batang", "Nanum Myeongjo", serif;
+  --f-en: "Instrument Serif", "Times New Roman", serif;
+  --f-ui: "Plus Jakarta Sans", "IBM Plex Sans KR", system-ui, sans-serif;
+  --spring: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100dvh;
+  background: var(--night);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+/* sky layers: only opacity animates */
+.sky, .sky::before, .sky::after { position: fixed; inset: 0; pointer-events: none; }
+.sky { background: radial-gradient(120% 80% at 70% -10%, var(--night-2), var(--night) 60%); z-index: 0; }
+.sky::before {
+  content: ""; opacity: var(--p, 0); transition: opacity 1.6s var(--spring);
+  background: radial-gradient(90% 60% at 50% 115%, rgba(243, 182, 138, 0.55), rgba(196, 120, 140, 0.18) 45%, transparent 75%);
+}
+.sky::after {
+  content: ""; opacity: calc(1 - var(--p, 0)); transition: opacity 1.6s var(--spring);
+  background-image: radial-gradient(1px 1px at 12% 18%, #fff8, transparent), radial-gradient(1px 1px at 78% 12%, #fff6, transparent),
+    radial-gradient(1.5px 1.5px at 40% 30%, #fff5, transparent), radial-gradient(1px 1px at 88% 40%, #fff5, transparent),
+    radial-gradient(1px 1px at 25% 55%, #fff4, transparent), radial-gradient(1px 1px at 62% 22%, #fff7, transparent);
+}
+
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.eyebrow {
+  display: inline-block; padding: 4px 12px; border-radius: 999px;
+  border: 1px solid var(--hair); background: var(--glass);
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-dim);
+}
+
+/* ---- home (song list) ---- */
+.home h1 { font-family: var(--f-en); font-weight: 400; font-size: clamp(44px, 8vw, 88px); line-height: 1; margin: 18px 0 8px; text-wrap: balance; }
+.home h1 em { color: var(--dawn); }
+.home p.lead { color: var(--ink-dim); max-width: 46ch; line-height: 1.6; margin: 0 0 40px; }
+.songs { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.shell { padding: 6px; border-radius: 28px; background: var(--glass); border: 1px solid var(--hair); }
+.core { border-radius: 22px; background: rgba(11, 13, 28, 0.72); box-shadow: inset 0 1px 1px rgba(255,255,255,0.08); }
+a.song { display: block; color: inherit; text-decoration: none; transition: transform 0.6s var(--spring); }
+a.song:hover { transform: translateY(-3px); }
+a.song .core { padding: 22px 22px 20px; }
+a.song .ko { font-family: var(--f-ko); font-size: 22px; }
+a.song .en { font-family: var(--f-en); font-style: italic; font-size: 20px; color: var(--dawn-soft); margin-top: 2px; }
+a.song .by { color: var(--ink-dim); font-size: 13px; margin-top: 14px; }
+
+/* ---- player page ---- */
+.player { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.left { position: sticky; top: calc(24px + env(safe-area-inset-top, 0px)); display: grid; gap: 18px; min-width: 0; }
+.back { color: var(--ink-dim); text-decoration: none; font-size: 13px; }
+.back:hover { color: var(--ink); }
+.titles .ko { font-family: var(--f-ko); font-size: clamp(26px, 3.2vw, 36px); font-weight: 700; margin: 10px 0 0; line-height: 1.25; }
+.titles .en { font-family: var(--f-en); font-style: italic; font-size: clamp(22px, 2.6vw, 30px); color: var(--dawn-soft); margin: 2px 0 0; }
+.titles .by { color: var(--ink-dim); font-size: 13px; margin-top: 6px; }
+.video .core { overflow: hidden; aspect-ratio: 16 / 9; max-width: 100%; }
+.video iframe, #yt { width: 100%; height: 100%; display: block; border: 0; }
+
+.bar { height: 2px; border-radius: 2px; background: var(--hair); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(var(--p, 0));
+  background: linear-gradient(90deg, var(--ink-faint), var(--dawn)); transition: transform 0.3s linear; }
+.bar-labels { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-faint); margin-top: 6px; }
+
+.controls .core { padding: 18px; display: grid; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.status { font-size: 13px; color: var(--ink-dim); line-height: 1.5; min-height: 1.5em; }
+.status b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+button.pill {
+  font: 500 14px var(--f-ui); color: var(--night); background: var(--dawn-soft);
+  border: 0; border-radius: 999px; padding: 6px 6px 6px 18px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 12px;
+  transition: transform 0.5s var(--spring), background 0.5s var(--spring);
+}
+button.pill:hover { background: #fff; }
+button.pill:disabled { opacity: 0.45; cursor: default; }
+button.pill:active { transform: scale(0.98); }
+button.pill .ic { width: 30px; height: 30px; border-radius: 50%; background: rgba(11,13,28,0.1); display: grid; place-items: center; transition: transform 0.5s var(--spring); }
+button.pill:hover .ic { transform: translate(2px, -1px) scale(1.05); }
+button.ghost {
+  font: 500 13px var(--f-ui); color: var(--ink-dim); background: transparent; border: 1px solid var(--hair);
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; transition: color 0.4s var(--spring), border-color 0.4s var(--spring);
+}
+button.ghost:hover { color: var(--ink); border-color: rgba(255,255,255,0.22); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--dawn); outline-offset: 3px; }
+.tune { font-size: 12px; color: var(--ink-faint); }
+.tune b { color: var(--ink-dim); font-variant-numeric: tabular-nums; font-weight: 500; }
+.note { font-family: var(--f-en); font-size: 18px; line-height: 1.5; color: var(--ink-dim); margin: 0; }
+.note span { display: block; font: 10px var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 6px; }
+
+.lyrics { list-style: none; margin: 0; padding: 30vh 0 40vh; display: grid; gap: 30px; min-width: 0; }
+.lyrics li { cursor: pointer; opacity: 0.32; transform: scale(0.97); transform-origin: left center;
+  transition: opacity 0.9s var(--spring), transform 0.9s var(--spring); }
+.lyrics li.past { opacity: 0.5; }
+.lyrics li.now { opacity: 1; transform: scale(1); }
+.lyrics .ko { font-family: var(--f-ko); font-size: clamp(20px, 2.3vw, 27px); line-height: 1.45; text-wrap: balance; }
+.lyrics .en { font-family: var(--f-en); font-style: italic; font-size: clamp(20px, 2.2vw, 26px); line-height: 1.35; color: var(--dawn-soft); margin-top: 4px; text-wrap: balance; }
+.lyrics li.title-line .ko { font-weight: 700; }
+.lyrics li.now.title-line .en { color: var(--dawn); }
+.lyrics li.intro { font-family: var(--f-en); font-style: italic; font-size: 22px; color: var(--ink-dim); cursor: default; }
+
+
+@media (max-width: 860px) {
+  .wrap { padding-block: 20px 48px; }
+  .player { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .left { position: static; }
+  .video { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+  .lyrics { padding: 4vh 0 30vh; gap: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="sky" id="sky"></div>
+<main class="wrap" id="app"></main>
+
+<script src="songs.js"></script>
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const params = new URLSearchParams(location.search);
+const song = (window.SONGS || []).find(s => s.id === params.get("s"));
+const app = $("#app");
+const PLAY = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 5v14l11-7z"/></svg>';
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+
+function renderHome() {
+  app.innerHTML = `
+    <section class="home">
+      <span class="eyebrow">Listen together · 같이 듣기</span>
+      <h1>Your night,<br><em>my morning.</em></h1>
+      <p class="lead">Korean songs with English lyrics that follow the music. Open one on both screens, wait for Ready, count 3, 2, 1 and press Play.</p>
+      <div class="songs">${SONGS.map(s => `
+        <a class="song shell" href="?s=${encodeURIComponent(s.id)}"><div class="core">
+          <div class="ko">${esc(s.title)}</div><div class="en">${esc(s.titleEn)}</div><div class="by">${esc(s.artist)}</div>
+        </div></a>`).join("")}</div>
+    </section>`;
+}
+
+/* ---------------- player ---------------- */
+// Flow: page loads -> muted warm-up play (eats any pre-roll ad + buffers) -> park at 0:00 -> "Ready".
+// Both people count 3-2-1 on the call and press Play; start is instant because it is already buffered.
+let player = null, ready = false, dur = 0;
+let phase = "loading";            // loading | warming | ready | playing | paused
+let ourAction = false;
+let tune = store.get("tune:" + (song && song.id), 0); // per-viewer lyric fine-tune (sec)
+let curIdx = -2;
+
+function renderPlayer() {
+  document.title = song.titleEn + " · Listen Together";
+  app.innerHTML = `
+    <div class="player">
+      <div class="left">
+        <a class="back" href="./">← All songs</a>
+        <div class="titles">
+          <span class="eyebrow">Now playing</span>
+          <h1 class="ko">${esc(song.title)}</h1>
+          <p class="en">${esc(song.titleEn)}</p>
+          <div class="by">${esc(song.artist)}</div>
+        </div>
+        <div class="video shell"><div class="core"><div id="yt"></div></div></div>
+        <div><div class="bar"><i></i></div><div class="bar-labels"><span>Your night</span><span>My morning</span></div></div>
+        <div class="controls shell"><div class="core">
+          <div class="status" id="status"></div>
+          <div class="row">
+            <button class="pill" id="play" disabled>Play · 재생<span class="ic">${PLAY}</span></button>
+            <button class="ghost" id="restart">Back to start · 처음으로</button>
+          </div>
+          <div class="row tune">
+            <span>Nudge playback</span>
+            <button class="ghost" id="nBack">−0.5s</button><button class="ghost" id="nFwd">+0.5s</button>
+          </div>
+          <div class="row tune">
+            <span>Lyrics timing <b id="tuneVal"></b></span>
+            <button class="ghost" id="tEarly">Earlier</button><button class="ghost" id="tLate">Later</button>
+          </div>
+        </div></div>
+        ${song.note ? `<p class="note"><span>About this song</span>${esc(song.note)}</p>` : ""}
+      </div>
+      <ol class="lyrics" id="lyrics">
+        <li class="intro" data-i="-1">♪ intro</li>
+        ${song.lines.map((l, i) => `<li data-i="${i}" class="${/그대의 밤을/.test(l[1]) ? "title-line" : ""}">
+          <div class="ko" lang="ko">${esc(l[1])}</div><div class="en">${esc(l[2])}</div></li>`).join("")}
+      </ol>
+    </div>`;
+
+  $("#lyrics").addEventListener("click", e => {
+    const li = e.target.closest("li[data-i]");
+    if (!li || !ready) return;
+    const i = +li.dataset.i;
+    if (i >= 0) { player.seekTo(Math.max(0, song.lines[i][0] + song.offset - tune - 0.3), true); play(); }
+  });
+  $("#play").onclick = () => (phase === "playing" ? pause() : play());
+  $("#restart").onclick = () => { ourAction = true; player.pauseVideo(); player.seekTo(0, true); phase = "ready"; };
+  $("#nBack").onclick = () => nudge(-0.5);
+  $("#nFwd").onclick = () => nudge(0.5);
+  $("#tEarly").onclick = () => setTune(tune + 0.5);
+  $("#tLate").onclick = () => setTune(tune - 0.5);
+  setTune(tune);
+
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player("yt", {
+      videoId: song.videoId,
+      playerVars: { playsinline: 1, rel: 0, cc_load_policy: 0 },
+      events: { onReady: warmUp, onStateChange: onState },
+    });
+  };
+  const s = document.createElement("script");
+  s.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(s);
+  setInterval(tick, 200);
+}
+
+function warmUp() {
+  ready = true;
+  dur = player.getDuration() || 0;
+  phase = "warming";
+  ourAction = true;
+  player.mute();          // muted autoplay is allowed without a click
+  player.playVideo();
+}
+
+function play() {
+  if (!ready) return;
+  player.unMute();
+  ourAction = true;
+  player.playVideo();
+  phase = "playing";
+}
+function pause() { ourAction = true; player.pauseVideo(); phase = "paused"; }
+function nudge(d) { if (ready) player.seekTo(Math.max(0, (player.getCurrentTime() || 0) + d), true); }
+
+function onState(e) {
+  const S = YT.PlayerState;
+  if (e.data === S.PLAYING) { try { player.unloadModule("captions"); } catch {} } // our lyrics replace YouTube's auto-captions
+  if (!ourAction) {                       // the viewer used the YouTube controls directly
+    if (e.data === S.PLAYING && phase !== "warming") { player.unMute(); phase = "playing"; }
+    if (e.data === S.PAUSED && phase === "playing") phase = "paused";
+  }
+  if (e.data === S.ENDED) phase = "ready";
+  ourAction = false;
+}
+
+function setTune(v) {
+  tune = Math.round(v * 10) / 10;
+  store.set("tune:" + song.id, tune);
+  $("#tuneVal").textContent = (tune > 0 ? "+" : "") + tune.toFixed(1) + "s";
+}
+
+function tick() {
+  if (!ready) { status("Loading the video…"); return; }
+  if (!dur) dur = player.getDuration() || 0;
+  const st = player.getPlayerState(), cur = player.getCurrentTime() || 0;
+
+  if (phase === "warming") {
+    // getCurrentTime stays at 0 while an ad runs; once the song itself moves, park it at 0:00
+    if (st === YT.PlayerState.PLAYING && cur > 0.25) {
+      ourAction = true; player.pauseVideo(); player.seekTo(0, true); player.unMute();
+      phase = "ready";
+    } else {
+      status("Getting ready (ad + buffering, muted) · 준비 중");
+    }
+  }
+  if (phase === "ready") status("<b>Ready ✓</b> Count 3, 2, 1 on the call and press Play · 준비 완료");
+  if (phase === "playing") status(`Playing <b>${fmt(cur)}</b> / ${fmt(dur)}`);
+  if (phase === "paused") status(`Paused at <b>${fmt(cur)}</b>`);
+
+  const btn = $("#play");
+  btn.disabled = phase === "loading" || phase === "warming";
+  const label = phase === "playing" ? "Pause · 일시정지" : "Play · 재생";
+  if (btn.firstChild.textContent !== label) btn.firstChild.textContent = label;
+
+  // lyrics + dawn
+  const lt = cur - song.offset + tune;
+  let idx = -1;
+  for (let i = 0; i < song.lines.length; i++) if (song.lines[i][0] <= lt + 0.15) idx = i;
+  if (idx !== curIdx) {
+    curIdx = idx;
+    document.querySelectorAll("#lyrics li").forEach(li => {
+      const i = +li.dataset.i;
+      li.classList.toggle("now", i === idx);
+      li.classList.toggle("past", i < idx);
+    });
+    const el = $(`#lyrics li[data-i="${idx}"]`);
+    if (el && cur > 0.5) el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+  document.documentElement.style.setProperty("--p", dur ? Math.min(1, cur / dur).toFixed(3) : 0);
+}
+
+function status(html) { const el = $("#status"); if (el.innerHTML !== html) el.innerHTML = html; }
+function fmt(s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+if (!song) renderHome(); else renderPlayer();
+</script>
+</body>
+</html>
