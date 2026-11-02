@@ -303,7 +303,7 @@ function tick() {
                && performance.now() - warmSince > 5000) {
       phase = "blocked";   // nothing moving for 5 s: the browser refused muted autoplay, so a tap does the warm-up
     } else if (phase === "warming") {
-      status(st === -1 && moving ? "An ad is playing muted. The song will be ready right after · 광고 중, 끝나면 자동 준비"
+      status(st === -1 && performance.now() - warmSince < 1000 ? "An ad is playing muted. The song will be ready right after · 광고 중, 끝나면 자동 준비"
                                  : "Getting ready (buffering, muted) · 준비 중");
     }
   }
