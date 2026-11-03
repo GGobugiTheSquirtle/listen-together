@@ -1,6 +1,9 @@
 // Song data for the listen-together page.
 // Add a song: copy one entry, set videoId (YouTube), offset (sec the MV lags the audio track),
 // and lines = [audioTrackSeconds, korean, english].  Timing source: Bugs synced lyrics.
+// breaks = [[audioTrackSeconds, seconds]]: the MV stops the song there for a scene of that length.
+// offset and breaks are measured by cross-correlating the MV sound with the audio track.
+// hook = text of the chorus line to emphasise; bar = labels under the progress bar (optional).
 window.SONGS = [
   {
     id: "night-morning",
@@ -9,6 +12,9 @@ window.SONGS = [
     artist: "Brown Eyed Soul",
     videoId: "giZqfyD__s0",
     offset: 3.5, // MV intro is longer than the audio track; checked against YouTube caption timing
+    breaks: [[210.8, 15.4]], // MV 3:34-3:50 is a scene with no song
+    hook: "그대의 밤을",
+    bar: ["Your night", "My morning"],
     note: "A shy confession. He has been lying awake all night thinking of her, and wants to say it before the night is over, so his morning can be the one that greets her night.",
     lines: [
       [20.5, "사랑이 들리나요 내 맘이 그런가 봐요", "Can you hear the love? I guess that's just my heart"],
@@ -34,6 +40,46 @@ window.SONGS = [
       [220.6, "나의 허전했던 많은 날에 행복이 돼줘요", "Be the happiness in all my empty days"],
       [228.6, "그대의 마음속에 나 항상 있어 줄게요", "I'll be in your heart, always"],
       [237.4, "처음 우리 그날처럼 그대", "Just like our very first day, my love"],
+    ],
+  },
+  {
+    id: "its-love",
+    title: "사랑인걸",
+    titleEn: "It's Love",
+    artist: "Mose",
+    videoId: "L1q2-mGHg9A", // official MV (1theK); its sound runs 0.5 s ahead of the audio track, Bugs stamps ~0.5 s early
+    offset: 0,
+    hook: "사랑인걸 사랑인걸",
+    note: "A song about after a breakup. She is gone, but every day she still walks into his memories so clearly that he can't let go. However hard he tries to erase it, it is still love.",
+    lines: [
+      [17.5, "하루가 가는 소릴 들어 너 없는 세상 속에", "I hear another day go by, in a world without you"],
+      [25.3, "달이 저물고 해가 뜨는 서러움", "The ache of watching the moon set and the sun come up"],
+      [32.2, "한 날도 한 시도 못 살 것 같더니", "I thought I couldn't live a single day, a single hour,"],
+      [38.8, "그저 이렇게 그리워하며 살아", "yet here I am, living on, just missing you"],
+      [47.4, "어디서부터 잊어갈까 오늘도 기억 속에", "Where do I even start forgetting? Again today, in my memories,"],
+      [54.9, "니가 찾아와 하루 종일 떠들어", "you come to me and talk all day long"],
+      [61.5, "니 말투 니 표정 너무 분명해서", "The way you talk, your expressions, so clear"],
+      [68.3, "마치 지금도 내 곁에 니가 사는 것만 같아", "it feels like you still live right here beside me"],
+      [76.5, "사랑인걸 사랑인걸 지워봐도 사랑인걸", "It's love, it's love. Even when I erase it, it's love"],
+      [83.8, "아무리 비워내도 내 안에는 너만 살아", "However much I empty myself, only you live inside me"],
+      [91.1, "너 하나만 너 하나만 기억하고 원하는걸", "Only you, only you are what I remember and want"],
+      [98.5, "보고픈 너의 사진을 꺼내어 보다 잠들어", "Missing you, I take out your photo and fall asleep looking at it"],
+      [112.0, "어디서부터 잊어갈까 오늘도 기억 속에", "Where do I even start forgetting? Again today, in my memories,"],
+      [119.4, "니가 찾아와 하루 종일 떠들어", "you come to me and talk all day long"],
+      [126.2, "니 말투 니 표정 너무 분명해서", "The way you talk, your expressions, so clear"],
+      [132.7, "마치 지금도 내 곁에 니가 사는 것만 같아", "it feels like you still live right here beside me"],
+      [141.1, "사랑인걸 사랑인걸 지워봐도 사랑인걸", "It's love, it's love. Even when I erase it, it's love"],
+      [148.3, "아무리 비워내도 내 안에는 너만 살아", "However much I empty myself, only you live inside me"],
+      [155.7, "너 하나만 너 하나만 기억하고 원하는걸", "Only you, only you are what I remember and want"],
+      [163.2, "보고픈 너의 사진을 꺼내어 보다 잠들어", "Missing you, I take out your photo and fall asleep looking at it"],
+      [170.8, "잠결에 흐르던 눈물이 곧 말라가듯 조금씩 흐려지겠지", "Like tears shed in my sleep soon dry, you'll fade a little at a time, I guess"],
+      [185.2, "손 내밀면 닿을 듯 아직은 눈에 선한 니 얼굴", "Your face, still so vivid, as if I could reach out and touch it"],
+      [192.9, "사랑해 사랑해 잊으면 안 돼 예이예", "I love you, I love you. Don't you forget, yeah"],
+      [204.1, "너만 보고 너만 알고 너만 위해 살았던 난", "I only saw you, only knew you, lived only for you"],
+      [211.1, "마음 둘 곳을 몰라 하루가 일 년 같아", "Now my heart has nowhere to go, and a day feels like a year"],
+      [218.5, "아무것도 아무 일도 아무 말도 못 하는 난", "I can't do anything, can't do a thing, can't say a word"],
+      [226.0, "그래도 사랑을 믿어 그래도 사랑을 믿어", "But still I believe in love, still I believe in love"],
+      [238.2, "오늘도 사랑을 믿어", "Today, too, I believe in love"],
     ],
   },
 ];

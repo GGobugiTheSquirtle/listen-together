@@ -182,6 +182,24 @@ let phase = "loading";            // loading | warming | ready | playing | pause
 let ourAction = false, warmSince = 0, lastCur = -1;
 let tune = store.get("tune:" + (song && song.id), 0); // per-viewer lyric fine-tune (sec)
 let curIdx = -2;
+// Lyric lines plus MV scene breaks, in track-time order. A break row stays lit from the cut until the next line.
+const rows = song ? song.lines.map((l, i) => ({ t: l[0], i }))
+  .concat((song.breaks || []).map(b => ({ t: b[0], gap: true }))).sort((a, b) => a.t - b.t) : [];
+
+// track time -> MV time
+function mvTime(a) {
+  return a + song.offset + (song.breaks || []).reduce((s, b) => s + (b[0] <= a ? b[1] : 0), 0);
+}
+// MV time -> track time; inside a break the track time stays frozen at the cut
+function trackTime(cur) {
+  let a = cur - song.offset;
+  for (const [at, len] of song.breaks || []) {
+    if (a < at) break;
+    if (a < at + len) return at;
+    a -= len;
+  }
+  return a;
+}
 
 function renderPlayer() {
   document.title = song.titleEn + " · Listen Together";
@@ -196,7 +214,7 @@ function renderPlayer() {
           <div class="by">${esc(song.artist)}</div>
         </div>
         <div class="video shell"><div class="core"><div id="yt"></div></div></div>
-        <div><div class="bar"><i></i></div><div class="bar-labels"><span>Your night</span><span>My morning</span></div></div>
+        <div><div class="bar"><i></i></div>${song.bar ? `<div class="bar-labels"><span>${esc(song.bar[0])}</span><span>${esc(song.bar[1])}</span></div>` : ""}</div>
         <div class="controls shell"><div class="core">
           <div class="status" id="status"></div>
           <div class="row">
@@ -219,17 +237,19 @@ function renderPlayer() {
         ${song.note ? `<p class="note"><span>About this song</span>${esc(song.note)}</p>` : ""}
       </div>
       <ol class="lyrics" id="lyrics">
-        <li class="intro" data-i="-1">♪ intro</li>
-        ${song.lines.map((l, i) => `<li data-i="${i}" class="${/그대의 밤을/.test(l[1]) ? "title-line" : ""}">
-          <div class="ko" lang="ko">${esc(l[1])}</div><div class="en">${esc(l[2])}</div></li>`).join("")}
+        <li class="intro" data-r="-1">♪ intro</li>
+        ${rows.map((r, k) => r.gap
+          ? `<li class="intro gap" data-r="${k}">♪ scene in the video · the song pauses<br>뮤비 장면 · 노래 잠시 멈춤</li>`
+          : `<li data-r="${k}" class="${song.hook && song.lines[r.i][1].includes(song.hook) ? "title-line" : ""}">
+          <div class="ko" lang="ko">${esc(song.lines[r.i][1])}</div><div class="en">${esc(song.lines[r.i][2])}</div></li>`).join("")}
       </ol>
     </div>`;
 
   $("#lyrics").addEventListener("click", e => {
-    const li = e.target.closest("li[data-i]");
+    const li = e.target.closest("li[data-r]");
     if (!li || !ready) return;
-    const i = +li.dataset.i;
-    if (i >= 0) { player.seekTo(Math.max(0, song.lines[i][0] + song.offset - tune - 0.3), true); play(); }
+    const r = rows[+li.dataset.r];
+    if (r && !r.gap) { player.seekTo(Math.max(0, mvTime(r.t) - tune - 0.3), true); play(); }
   });
   $("#play").onclick = () => (phase === "playing" ? pause() : phase === "blocked" ? warmUp() : play());
   $("#restart").onclick = () => { ourAction = true; player.pauseVideo(); player.seekTo(0, true); phase = "ready"; };
@@ -250,8 +270,8 @@ function renderPlayer() {
   s.src = "https://www.youtube.com/iframe_api";
   s.onerror = () => { ytError = "script"; };
   document.head.appendChild(s);
-  $("#mAudio").onclick = () => startManual(0);
-  $("#mMv").onclick = () => startManual(song.offset);
+  $("#mAudio").onclick = () => startManual(false);
+  $("#mMv").onclick = () => startManual(true);
   setInterval(tick, 200);
 }
 
@@ -280,9 +300,9 @@ function nudge(d) {
 
 // Lyrics-only mode: for when the YouTube player can't load here (blocked network, ad blocker, region).
 // The song plays in another app; the lyrics run on a local clock started at the same 3-2-1.
-let manual = null, ytError = null;   // manual = { t0, offset, pausedAt }
-function startManual(offset) {
-  manual = { t0: 0, offset, pausedAt: 0 };
+let manual = null, ytError = null;   // manual = { t0, mv, pausedAt }; mv = timing follows the MV (offset + breaks)
+function startManual(mv) {
+  manual = { t0: 0, mv, pausedAt: 0 };
   $("#play").disabled = false;
   $("#play").firstChild.textContent = "Start lyrics · 가사 시작";
   $("#play").onclick = () => {
@@ -323,7 +343,7 @@ function tick() {
     if ($("#play").firstChild.textContent !== label) $("#play").firstChild.textContent = label;
     status(!manual.t0 ? "Play the song in your music or YouTube app, and press <b>Start lyrics</b> on the same 3, 2, 1"
                       : `Lyrics only <b>${fmt(pos)}</b>. Use Nudge if the words run early or late`);
-    drawLyrics(pos, manual.offset, dur || song.lines[song.lines.length - 1][0] + 40);
+    drawLyrics(pos, manual.mv, dur || song.lines[song.lines.length - 1][0] + 40);
     return;
   }
   if (ytError !== null || (!ready && performance.now() > 10000)) {
@@ -364,21 +384,22 @@ function tick() {
   const label = phase === "playing" ? "Pause · 일시정지" : phase === "blocked" ? "Get ready · 준비" : "Play · 재생";
   if (btn.firstChild.textContent !== label) btn.firstChild.textContent = label;
 
-  if (ytError === null) drawLyrics(cur, song.offset, dur);
+  if (ytError === null) drawLyrics(cur, true, dur);
 }
 
-function drawLyrics(cur, offset, dur) {
-  const lt = cur - offset + tune;
+// mv = cur is a position in the MV (apply offset + breaks); otherwise it is a position in the audio track
+function drawLyrics(cur, mv, dur) {
+  const lt = mv ? trackTime(cur + tune) : cur + tune;
   let idx = -1;
-  for (let i = 0; i < song.lines.length; i++) if (song.lines[i][0] <= lt + 0.15) idx = i;
+  rows.forEach((r, k) => { if (r.t <= lt + 0.15 && (mv || !r.gap)) idx = k; });
   if (idx !== curIdx) {
     curIdx = idx;
     document.querySelectorAll("#lyrics li").forEach(li => {
-      const i = +li.dataset.i;
-      li.classList.toggle("now", i === idx);
-      li.classList.toggle("past", i < idx);
+      const k = +li.dataset.r;
+      li.classList.toggle("now", k === idx);
+      li.classList.toggle("past", k < idx);
     });
-    const el = $(`#lyrics li[data-i="${idx}"]`);
+    const el = $(`#lyrics li[data-r="${idx}"]`);
     if (el && cur > 0.5) el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
   document.documentElement.style.setProperty("--p", dur ? Math.min(1, cur / dur).toFixed(3) : 0);
